@@ -1,0 +1,30 @@
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: stellasorabot:local
+    userns_mode: "keep-id"
+    working_dir: /app
+    command: bash
+    stdin_open: true
+    tty: true
+    environment:
+      - STELLA_SORA_DIR=/data/game
+    volumes:
+      - ./vendor/:/app/vendor/:Z
+      - ./user-config.py:/app/user-config.py:ro,Z
+      - ./user-passwords.py:/app/user-passwords.py:ro,Z
+      # Game install folder
+      - /EDIT/ME/StellaSora_EN:/data/game:Z
+      # Persistent bot outputs
+      - ./assets:/app/assets:Z
+    ports:
+      - "8000:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
