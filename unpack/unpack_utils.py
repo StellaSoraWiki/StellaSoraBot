@@ -66,11 +66,25 @@ def asset_map(files: list[Path], mapper: Callable[[ObjectReader, Environment], T
 
 def build_ss_lua_dumper(dumper_dir: Path = vendor_library_dir / "SSLuaDumper") -> Path:
     if not dumper_dir.exists():
-        subprocess.run(['git', 'clone', 'https://github.com/StellaSoraWiki/SSLuaDumper'],
-                       check=True,
-                       cwd=vendor_library_dir)
+        # SSLuaDumper is private, so this fails without git credentials —
+        # for example inside the container. Clone it yourself with credentials
+        # and move it into vendor/ to provision it there.
+        try:
+            subprocess.run(['git', 'clone', 'https://github.com/StellaSoraWiki/SSLuaDumper'],
+                           check=True,
+                           cwd=vendor_library_dir)
+        except subprocess.CalledProcessError:
+            raise RuntimeError(
+                "Could not git clone the private vendor/SSLuaDumper repository. "
+                "Clone it on a machine with git credentials, then move it into vendor/"
+            ) from None
     assert dumper_dir.exists() and dumper_dir.is_dir()
-    subprocess.run(["git", "pull"], check=True, cwd=dumper_dir)
+    try:
+        subprocess.run(["git", "pull"], check=True, cwd=dumper_dir)
+    except subprocess.CalledProcessError:
+        # Credential-less runs (e.g. the container) keep using the vendored
+        # clone as-is instead of failing the whole asset export.
+        print("WARNING: could not git pull vendor/SSLuaDumper; using the existing clone as-is.")
     subprocess.run(['dotnet', 'build'], check=True, cwd=dumper_dir / "SSLuaDumper")
     unluac = dumper_dir / "unluac.jar"
     if not unluac.exists():
