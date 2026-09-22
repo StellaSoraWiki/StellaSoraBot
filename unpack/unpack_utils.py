@@ -69,7 +69,7 @@ def build_fk_stella_sora(unpacker_dir: Path = vendor_library_dir / "fkStellaSora
                        check=True,
                        cwd=vendor_library_dir)
     assert unpacker_dir.exists() and unpacker_dir.is_dir()
-    subprocess.run(["git", "pull"], check=True, cwd=unpacker_dir)
+    # subprocess.run(["git", "pull"], check=True, cwd=unpacker_dir)
     subprocess.run(['dotnet', 'build'], check=True, cwd=unpacker_dir)
     return unpacker_dir
 
