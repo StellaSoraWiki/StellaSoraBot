@@ -12,7 +12,7 @@ services:
     environment:
       - STELLA_SORA_DIR=/data/game
     volumes:
-      - ./vendor/:/app/vendor/:Z
+      - ./vendor/fkStellaSora:/app/vendor/fkStellaSora:Z
       - ./user-config.py:/app/user-config.py:ro,Z
       - ./user-passwords.py:/app/user-passwords.py:ro,Z
       # Game install folder
