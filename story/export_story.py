@@ -1,13 +1,14 @@
 import re
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cache
 from typing import Optional
 
 from character_info.char_sprite_face import sanitize_css_class
+from character_info.char_sprites import get_avg_characters
 from character_info.characters import id_to_char
 from story.parse_story import get_story_episodes, StoryEpisode, StoryRow
-from story.story_assets import export_story_assets, get_front_object_file_name
+from story.story_assets import export_story_assets, gendered_image_pair, get_front_object_file_name
 from utils.data_utils import assets_root
 from utils.wiki_utils import save_page
 
@@ -32,6 +33,7 @@ class StoryEntry:
     page_title: str
     episode_id: str
     parent_episode_ids: tuple[str, ...]
+    evidence_ids: tuple[str, ...] = field(default=(), kw_only=True)
 
 
 @dataclass
@@ -41,7 +43,6 @@ class ChoiceContext:
     option: Optional[str] = None
 
 
-PROTAGONIST_CHARACTER_IDS = frozenset({"avg3_100"})
 TYRANT_GENDER_GROUP = "tgender"
 FEMALE_TYRANT_NAME = "Female tyrant"
 MALE_TYRANT_NAME = "Male tyrant"
@@ -71,11 +72,16 @@ def _tyrant_sprite_name(char_name: str) -> str:
 
 
 def _sprite_name_for_character_id(character_id: str, fallback_name: str) -> str:
+    avg_characters, reuse_table = get_avg_characters()
+    character_id = reuse_table.get(character_id, character_id)
     match = re.fullmatch(r"avg1_(\d+)", character_id)
     if match:
         character = id_to_char(match.group(1))
         if character is not None:
             return character.name
+    avg_character = avg_characters.get(character_id)
+    if avg_character is not None:
+        return avg_character.name
     return fallback_name
 
 
@@ -104,19 +110,22 @@ def _story_background_template(bg_image: str) -> str | None:
     return None
 
 
+def _gender_content(female: str, male: str) -> str:
+    return f"{{{{GenderContent|{female}|{male}}}}}"
+
+
 def _story_background_content(bg_image: str) -> str | None:
-    pair = _gendered_background_pair(bg_image)
+    pair = gendered_image_pair(bg_image) or _gendered_background_pair(bg_image)
     if pair is not None:
         female_template = _story_background_template(pair[0])
         male_template = _story_background_template(pair[1])
         if female_template is not None and male_template is not None:
-            return (
-                "{{GenderContent"
-                f"|{female_template}"
-                f"|{male_template}"
-                "}}"
-            )
+            return _gender_content(female_template, male_template)
     return _story_background_template(bg_image)
+
+
+def _front_object_image(image_name: str) -> str:
+    return f"[[File:{get_front_object_file_name(image_name)}|200px|link=]]"
 
 
 def _append_group_option(
@@ -149,10 +158,7 @@ def story_row_to_messenger(
         variant = row.attributes.get("variant", "a")
         expression = row.attributes.get("expression", "00")
         character_id = row.attributes.get("character_id", "")
-        is_reply = (
-            row.attributes.get("is_reply") == "true"
-            or character_id in PROTAGONIST_CHARACTER_IDS
-        )
+        is_reply = row.attributes.get("is_reply") == "true"
 
         speaker_name = speaker
         sprite_name = _sprite_name_for_character_id(character_id, speaker_name)
@@ -232,8 +238,11 @@ def story_row_to_messenger(
     if row.name == "front_object":
         image_name = row.attributes.get("image", "")
         if image_name:
-            file_name = get_front_object_file_name(image_name)
-            content = f"[[File:{file_name}|200px|link=]]"
+            pair = gendered_image_pair(image_name)
+            if pair is None:
+                content = _front_object_image(image_name)
+            else:
+                content = _gender_content(*map(_front_object_image, pair))
             result.extend(["| raw", f"| content :: {content}", ""])
         return _append_group_option(result, group, option)
 
@@ -403,25 +412,27 @@ def major_choice_target_links(
             if row.attributes.get("choice_type") != "major":
                 continue
 
-            options = [
-                key.removeprefix("option")
-                for key in row.attributes
-                if re.fullmatch(r"option\d+", key)
-            ]
-            options = sorted(options, key=int)
-            if len(options) != len(child_entries):
-                print(
-                    "WARNING: Major choice target count mismatch for "
-                    f"{entry.page_title}: {len(options)} options, "
-                    f"{len(child_entries)} child pages"
-                )
-                continue
-
             choice_id = row.attributes["choice_id"]
-            for option, child_entry in zip(options, child_entries):
+            for key in row.attributes:
+                if not re.fullmatch(r"option\d+", key):
+                    continue
+                option = key.removeprefix("option")
+                evidence_id = row.attributes.get(f"evidence{option}")
+                targets = [
+                    child_entry
+                    for child_entry in child_entries
+                    if evidence_id in child_entry.evidence_ids
+                ]
+                if len(targets) != 1:
+                    print(
+                        "WARNING: Cannot resolve major choice target for "
+                        f"{entry.page_title} option {option} ({evidence_id}): "
+                        f"{len(targets)} matching child pages"
+                    )
+                    continue
                 result.setdefault(entry.episode_id, {})[
                     (choice_id, option)
-                ] = child_entry.page_title
+                ] = targets[0].page_title
 
     return result
 

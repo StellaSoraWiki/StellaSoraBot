@@ -8,6 +8,10 @@ from utils.data_utils import load_lua_table
 from utils.text_utils import escape_text
 
 
+PROTAGONIST_CHARACTER_IDS = frozenset({"avg3_100"})
+SPEAKER_NAME_ALIASES = {"Taffett": "avg1_139"}
+
+
 class StoryRow:
     name: str
     attributes: dict[str, str]
@@ -87,7 +91,7 @@ def phone_sticker_link(image_name: str) -> str:
     return f"[[File:Phone_{image_name}.png|{size}px]]"
 
 
-def process_text(text: str) -> str:
+def process_text(text: str, dark_background: bool = False) -> str:
     sex_dict = get_character_sex_strings()
     gender_tabs: dict[str, str] = {}
 
@@ -95,13 +99,13 @@ def process_text(text: str) -> str:
         values = sex_dict.get(match.group(0))
         if values is None:
             return match.group(0)
-        female, male = (escape_text(value) for value in values)
+        female, male = (escape_text(value, dark_background) for value in values)
         token = f"__STORY_GENDER_TAB_{len(gender_tabs)}__"
         gender_tabs[token] = f"{{{{GenderContent|1={female}|2={male}}}}}"
         return token
 
     text, _ = re.subn(r"==SEX\d*==", replace_sex_marker, text)
-    text = escape_text(text)
+    text = escape_text(text, dark_background)
     for token, tab in gender_tabs.items():
         text = text.replace(token, tab)
     return text
@@ -145,13 +149,13 @@ def parse_story_episode(episode_id: str, data: Any) -> StoryEpisode:
         cmd = row["cmd"]
         params = row.get("param", [])
 
-        def append_dialogue(char_id: str, text: str):
-            speaker_name = get_character_name_from_id(char_id)
+        def append_dialogue(char_id: str, text: str, speaker_name: str = ""):
+            speaker_name = speaker_name or get_character_name_from_id(char_id)
 
             char_state = state.get_character_state(char_id)
 
-            is_reply = char_id == state.pending_reply_char
-            if is_reply:
+            is_reply = is_reply_char(char_id)
+            if char_id == state.pending_reply_char:
                 state.pending_reply_char = None
 
             rows.append(
@@ -168,18 +172,31 @@ def parse_story_episode(episode_id: str, data: Any) -> StoryEpisode:
                 )
             )
 
+        def is_reply_char(char_id: str) -> bool:
+            return char_id == state.pending_reply_char or char_id in PROTAGONIST_CHARACTER_IDS
+
         def set_talk():
             _, char_id, _, _, _, _, _, text, _ = params
             # Animation frames the game itself keeps out of the story log.
             if text.startswith("_NOT_IN_LOG_"):
                 return
-            text = process_text(text)
+            text = process_text(text, is_reply_char(char_id))
             if text:
-                append_dialogue(char_id, text)
+                if char_id in SPEAKER_NAME_ALIASES:
+                    append_dialogue(SPEAKER_NAME_ALIASES[char_id], text, char_id)
+                else:
+                    append_dialogue(char_id, text)
+
+        def set_bubble():
+            char_id, expression, _, _, _, _, speaker_name, _, text, _ = params
+            text = process_text(text, is_reply_char(char_id))
+            if text:
+                update_character_state(char_id, None, expression)
+                append_dialogue(char_id, text, process_text(speaker_name))
 
         def set_phone_msg():
             msg_type, char_id, image_name, _, _, _, _, text, _ = params
-            text = process_text(text)
+            text = process_text(text, msg_type != 5 and is_reply_char(char_id))
             if msg_type == 5:
                 if text:
                     rows.append(StoryRow("info", {"text": text}))
@@ -347,7 +364,8 @@ def parse_story_episode(episode_id: str, data: Any) -> StoryEpisode:
 
         def set_major_choice():
             choice_texts = []
-            option_params = params[1:-5]
+            evidence_ids = []
+            option_params = params[1:22] + params[27:]
             for i in range(0, len(option_params), 7):
                 option = option_params[i:i + 7]
                 if len(option) < 4:
@@ -358,7 +376,11 @@ def parse_story_episode(episode_id: str, data: Any) -> StoryEpisode:
                     choice_texts.append(f"{prompt}<br>{action}")
                 else:
                     choice_texts.append(prompt or action)
+                evidence_ids.append(str(option[5]) if len(option) > 5 else "")
             append_choice_begin(str(params[0]), choice_texts, "major")
+            for num, evidence_id in enumerate(evidence_ids, 1):
+                if evidence_id:
+                    rows[-1].attributes[f"evidence{num}"] = evidence_id
 
         def set_choice_jump():
             rows.append(StoryRow("choice_jump", {
@@ -380,6 +402,7 @@ def parse_story_episode(episode_id: str, data: Any) -> StoryEpisode:
         dispatcher = {
             "SetTalk": set_talk,
             "SetPhoneMsg": set_phone_msg,
+            "SetBubble": set_bubble,
             "SetBGM": set_bgm,
             "SetBg": set_bg,
             "SetSceneHeading": set_scene_heading,
