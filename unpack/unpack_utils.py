@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TypeVar, Callable
 
 import UnityPy
+import requests
 from UnityPy import Environment
 from UnityPy.files import ObjectReader
 
@@ -63,15 +64,21 @@ def asset_map(files: list[Path], mapper: Callable[[ObjectReader, Environment], T
     return result
 
 
-def build_fk_stella_sora(unpacker_dir: Path = vendor_library_dir / "fkStellaSora") -> Path:
-    if not unpacker_dir.exists():
-        subprocess.run(['git', 'clone', 'https://github.com/shiikwi/fkStellaSora'],
+def build_ss_lua_dumper(dumper_dir: Path = vendor_library_dir / "SSLuaDumper") -> Path:
+    if not dumper_dir.exists():
+        subprocess.run(['git', 'clone', 'https://github.com/StellaSoraWiki/SSLuaDumper'],
                        check=True,
                        cwd=vendor_library_dir)
-    assert unpacker_dir.exists() and unpacker_dir.is_dir()
-    subprocess.run(["git", "pull"], check=True, cwd=unpacker_dir)
-    subprocess.run(['dotnet', 'build'], check=True, cwd=unpacker_dir)
-    return unpacker_dir
+    assert dumper_dir.exists() and dumper_dir.is_dir()
+    subprocess.run(["git", "pull"], check=True, cwd=dumper_dir)
+    subprocess.run(['dotnet', 'build'], check=True, cwd=dumper_dir / "SSLuaDumper")
+    unluac = dumper_dir / "unluac.jar"
+    if not unluac.exists():
+        response = requests.get("https://github.com/scratchminer/unluac/releases/download/v2023.03.22/unluac.jar",
+                                timeout=60)
+        response.raise_for_status()
+        unluac.write_bytes(response.content)
+    return dumper_dir
 
 
 class UnityJsonEncoder(json.JSONEncoder):

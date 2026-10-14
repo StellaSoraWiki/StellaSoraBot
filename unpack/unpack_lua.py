@@ -1,28 +1,29 @@
 import shutil
 import subprocess
-import sys
+import tempfile
 from pathlib import Path
 
 from unpack.unpack_paths import data_dir
-from unpack.unpack_utils import build_fk_stella_sora, native_exe
+from unpack.unpack_utils import build_ss_lua_dumper, native_exe
 
 
 def export_lua():
-    unpacker_dir = build_fk_stella_sora()
-    lua_source = data_dir / "Persistent_Store/Scripts/lua.arcx"
-    lua_source_dir = lua_source.parent / "luaUnpack"
-    shutil.rmtree(lua_source_dir, ignore_errors=True)
-    archive_parser = native_exe(unpacker_dir / "ArchiveParser/bin/Debug/net8.0/ArchiveParser")
-    subprocess.run([archive_parser.absolute(), lua_source],
-                   check=True,
-                   cwd=unpacker_dir)
-    assert lua_source_dir.exists() and lua_source_dir.is_dir()
-    subprocess.run([sys.executable, 'decompile.py', lua_source_dir], check=True, cwd=unpacker_dir / "Luadec")
-    lua_source_dir = lua_source_dir.parent / "luaUnpackdec"
+    dumper_dir = build_ss_lua_dumper()
+    dumper = native_exe(dumper_dir / "SSLuaDumper/bin/Debug/net10.0/SSLuaDumper")
     lua_target_dir = Path("assets") / "lua"
-    if lua_target_dir.exists():
-        shutil.rmtree(lua_target_dir)
-    shutil.move(lua_source_dir, lua_target_dir)
+    with tempfile.TemporaryDirectory() as work_dir:
+        work_dir = Path(work_dir)
+        lua_arcx = work_dir / "lua.arcx"
+        shutil.copy(data_dir / "Persistent_Store/Scripts/lua.arcx", lua_arcx)
+        subprocess.run([dumper.absolute(), lua_arcx], check=True, cwd=dumper_dir)
+        lua_source_dir = work_dir / "Lua"
+        assert lua_source_dir.exists() and lua_source_dir.is_dir()
+        shutil.rmtree(lua_target_dir, ignore_errors=True)
+        for f in lua_source_dir.rglob("*.lua"):
+            # SSLuaDumper writes Windows paths, which become literal backslashes in file names on Linux
+            target = lua_target_dir / str(f.relative_to(lua_source_dir)).replace("\\", "/").lower()
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(f, target)
 
 
 if __name__ == "__main__":

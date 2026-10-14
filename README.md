@@ -12,8 +12,8 @@ Special thanks to [StellaSoraData](https://github.com/Hiro420/StellaSoraData) an
 | [uv](https://docs.astral.sh/uv/) | dependency + venv manager; fetches Python itself | `winget install astral-sh.uv` |
 | Python 3.13+ | | `uv python install 3.13` |
 | Git | vendored repos under `vendor/` are cloned/pulled at runtime | `winget install Git.Git` |
-| .NET 8 SDK | `dotnet build` of the fkStellaSora unpacker | `winget install Microsoft.DotNet.SDK.8` |
-| Java 17+ (JRE/JDK) | fkStellaSora's Luadec step runs `java -jar unluac.jar` to decompile lua | `winget install EclipseAdoptium.Temurin.17.JDK` |
+| .NET 10 SDK | `dotnet build` of the SSLuaDumper lua unpacker | `winget install Microsoft.DotNet.SDK.10` |
+| Java 17+ (JRE/JDK) | SSLuaDumper runs `java -jar unluac.jar` to decompile lua | `winget install EclipseAdoptium.Temurin.17.JDK` |
 | ffmpeg (with ffprobe) | wav→ogg conversion, audio duration | `winget install Gyan.FFmpeg` |
 | vgmstream-cli | wem/txtp→wav conversion | download [vgmstream-win64](https://vgmstream.org/), add to `PATH` |
 | Chrome/Chromium | Playwright-driven Live2D screenshots | After `uv sync`, run `uv run playwright install chromium` |
@@ -30,7 +30,9 @@ uv sync
 
 Everything under `vendor/` is fetched on first use — the
 [StellaSoraData](https://github.com/Hiro420/StellaSoraData) game data repo, the
-[fkStellaSora](https://github.com/shiikwi/fkStellaSora) unpacker, and
+[SSLuaDumper](https://github.com/StellaSoraWiki/SSLuaDumper) lua unpacker (a private repo, so
+your git credentials need read access to it) along with
+[unluac](https://github.com/scratchminer/unluac), and
 [wwiser](https://github.com/bnnm/wwiser). Nothing there needs to be set up by hand.
 
 `uv sync` installs only the base dependencies. The optional GroundingDINO face-detection path
