@@ -18,7 +18,7 @@ from utils.wiki_utils import save_json_page
 
 model_root = assets_root / "actor3d"
 
-MODEL_REPO = "lihaohong6/StellaSoraModels"
+MODEL_REPO = "StellaSoraWiki/StellaSoraModels"
 # jsDelivr caches a branch for 12 hours; use a tag or sha to skip that wait.
 MODEL_REPO_REF = "main"
 CDN_BASE = f"https://cdn.jsdelivr.net/gh/{MODEL_REPO}@{MODEL_REPO_REF}/"
