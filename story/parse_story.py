@@ -91,7 +91,7 @@ def phone_sticker_link(image_name: str) -> str:
     return f"[[File:Phone_{image_name}.png|{size}px]]"
 
 
-def process_text(text: str, dark_background: bool = False) -> str:
+def process_text(text: str, dark_background: bool = False, sex: Optional[int] = None) -> str:
     sex_dict = get_character_sex_strings()
     gender_tabs: dict[str, str] = {}
 
@@ -99,6 +99,8 @@ def process_text(text: str, dark_background: bool = False) -> str:
         values = sex_dict.get(match.group(0))
         if values is None:
             return match.group(0)
+        if sex is not None:
+            return values[sex]
         female, male = (escape_text(value, dark_background) for value in values)
         token = f"__STORY_GENDER_TAB_{len(gender_tabs)}__"
         gender_tabs[token] = f"{{{{GenderContent|1={female}|2={male}}}}}"
@@ -109,6 +111,13 @@ def process_text(text: str, dark_background: bool = False) -> str:
     for token, tab in gender_tabs.items():
         text = text.replace(token, tab)
     return text
+
+
+def process_gendered_text(female: str, male: str, dark_background: bool = False) -> str:
+    if not male or male == female:
+        return process_text(female, dark_background)
+    female, male = (process_text(text, dark_background, sex) for sex, text in enumerate((female, male)))
+    return f"{{{{GenderContent|1={female}|2={male}}}}}"
 
 
 def normalize_story_id(story_id: str) -> str:
@@ -176,11 +185,11 @@ def parse_story_episode(episode_id: str, data: Any) -> StoryEpisode:
             return char_id == state.pending_reply_char or char_id in PROTAGONIST_CHARACTER_IDS
 
         def set_talk():
-            _, char_id, _, _, _, _, _, text, _ = params
+            _, char_id, _, _, _, _, _, text, male_text = params
             # Animation frames the game itself keeps out of the story log.
             if text.startswith("_NOT_IN_LOG_"):
                 return
-            text = process_text(text, is_reply_char(char_id))
+            text = process_gendered_text(text, male_text, is_reply_char(char_id))
             if text:
                 if char_id in SPEAKER_NAME_ALIASES:
                     append_dialogue(SPEAKER_NAME_ALIASES[char_id], text, char_id)
@@ -195,8 +204,8 @@ def parse_story_episode(episode_id: str, data: Any) -> StoryEpisode:
                 append_dialogue(char_id, text, process_text(speaker_name))
 
         def set_phone_msg():
-            msg_type, char_id, image_name, _, _, _, _, text, _ = params
-            text = process_text(text, msg_type != 5 and is_reply_char(char_id))
+            msg_type, char_id, image_name, _, _, _, _, text, male_text = params
+            text = process_gendered_text(text, male_text, msg_type != 5 and is_reply_char(char_id))
             if msg_type == 5:
                 if text:
                     rows.append(StoryRow("info", {"text": text}))
