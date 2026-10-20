@@ -238,13 +238,16 @@ def _order_stages(stages: list[MainStoryStage]) -> list[MainStoryStage]:
 @cache
 def get_main_story_chapters() -> list[MainStoryChapter]:
     chapters: list[MainStoryChapter] = []
+    name_counts: Counter[str] = Counter()
     for chapter in sorted(autoload("StoryChapter").values(), key=lambda v: v["Id"]):
         if chapter["Type"] == 1:
             number = str(int(chapter["Index"]))
             page_title = f"{MAIN_STORY_PAGE}/Chapter {number}"
         else:
             number = None
-            page_title = f"{MAIN_STORY_PAGE}/{chapter['Name']}"
+            name_counts[chapter["Name"]] += 1
+            count = name_counts[chapter["Name"]]
+            page_title = f"{MAIN_STORY_PAGE}/{chapter['Name']}{f' {count}' if count > 1 else ''}"
         icon = chapter["ChapterIcon"].rsplit("/", 1)[-1].replace("_", " ")
         chapters.append(
             MainStoryChapter(
@@ -451,8 +454,8 @@ def save_main_story_index() -> None:
 def main():
     export_story_assets(get_main_story_episodes())
     save_main_story_stage_pages()
-    # save_main_story_chapter_pages()
-    # save_main_story_index()
+    save_main_story_chapter_pages()
+    save_main_story_index()
 
 
 if __name__ == "__main__":
