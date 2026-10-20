@@ -85,29 +85,20 @@ class InvitationStory:
         return assets_root / "icon" / "datingeventcg" / f"datingspcg_{self.id}.png"
 
 
-@dataclass
-class Landmark:
-    id: int
-    name: str
+@cache
+def get_landmark_names() -> dict[int, str]:
+    return {v['Id']: v['Name'].removeprefix("The ") for v in autoload("DatingLandmark").values()}
 
 
 @cache
-def get_landmarks() -> dict[str, Landmark]:
-    data = autoload("DatingLandmark")
-    result: dict[str, Landmark] = {}
-    for k, v in data.items():
-        name = v['Name'].replace("The ", "")
-        result[name] = Landmark(int(k), v)
-    return result
+def get_landmark_branches() -> dict[int, dict]:
+    return {v['DatingEventParams'][0]: v for v in autoload("DatingBranch").values() if v['DatingEventType'] == 7}
 
 
-def get_landmark_option(landmark: str, branch: int):
-    data = autoload("DatingBranch")
-    landmarks = get_landmarks()
-    assert landmark in landmarks
-    key = str(landmarks[landmark].id * 1000 + 1)
-    assert key in data
-    return data[key].get(f"Option{branch}")
+def get_landmark_option(landmark_id: int, branch: int) -> str:
+    branches = get_landmark_branches()
+    assert landmark_id in branches, f"Landmark {landmark_id} has no branch options"
+    return branches[landmark_id][f"Option{branch}"]
 
 
 def get_invitation_stories() -> dict[str, list[InvitationStory]]:
@@ -121,20 +112,14 @@ def get_invitation_stories() -> dict[str, list[InvitationStory]]:
             continue
         char = chars[char_id]
         desc = "\n\n".join(v[f"Desc{i}"] for i in range(1, 10) if f"Desc{i}" in v)
-        clue = v['Clue']
-        landmark = re.search(r"the (.*) to unlock", clue)
-        if landmark is None:
-            landmark = re.search(r"^Visit (.*) to unlock", clue)
-        landmark = landmark.group(1)
-        branch = v['BranchTag']
-        option = get_landmark_option(landmark, branch)
+        landmark_id = v['DatingEventParams'][1]
         result[char.name] = result.get(char.name, [])
         result[char.name].append(InvitationStory(
             id=event_id,
             name=v['Name'],
-            clue=clue,
-            landmark=landmark,
-            option=option,
+            clue=v['Clue'],
+            landmark=get_landmark_names()[landmark_id],
+            option=get_landmark_option(landmark_id, v['BranchTag']),
             memory=v['Memory'],
             desc=desc,
         ))
