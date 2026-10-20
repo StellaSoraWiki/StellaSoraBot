@@ -138,7 +138,7 @@ def retrieve_sprite_json_data(f: Path) -> SpriteData | None:
 
 
 chars_blacklist: set[str] = {
-    "Aobelle", "Aspara", "Kieb",
+    "Aobelle", "Kieb",
 }
 
 variant_blacklist: dict[str, set[str]] = {}
