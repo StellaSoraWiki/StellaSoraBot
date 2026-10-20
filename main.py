@@ -15,6 +15,7 @@ from page_generators.discs import update_disc_all
 from page_generators.events import save_event_all
 from page_generators.live2d_talent_images import live2d_talent_images_main
 from page_generators.purge_pages import purge_all_pages
+from story.export_disc_story import save_disc_recollection_stories
 from utils.data_utils import autoload_all_files
 
 
@@ -38,6 +39,7 @@ def main():
     update_character_page()
     save_event_all()
     update_disc_all()
+    save_disc_recollection_stories()
     purge_all_pages()
 
 

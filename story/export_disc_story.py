@@ -62,7 +62,7 @@ def get_disc_story_episodes() -> dict[str, StoryEpisode]:
     return episodes
 
 
-def save_disc_stories() -> None:
+def save_disc_recollection_stories() -> None:
     episodes = get_disc_story_episodes()
     export_story_assets(episodes)
     for entry in get_disc_story_entries():
@@ -85,7 +85,7 @@ def save_disc_stories() -> None:
 
 
 def main():
-    save_disc_stories()
+    save_disc_recollection_stories()
 
 
 if __name__ == "__main__":
