@@ -1,8 +1,12 @@
+import argparse
 import json
 import re
 import subprocess
 import sys
+import warnings
+from functools import cache
 from pathlib import Path
+from typing import Any
 
 from PIL import Image
 
@@ -29,20 +33,30 @@ def pick_representative_sprite(sprites: list[Sprite]) -> Path | None:
     return None
 
 
-def detect_faces():
+@cache
+def _load_detector() -> tuple[Any, str]:
     if not VENDOR_DIR.exists():
         subprocess.run(["git", "clone", "https://github.com/idea-research/groundingdino"], cwd=VENDOR_DIR.parent)
     sys.path.insert(0, str(VENDOR_DIR))
-    from groundingdino.util.inference import load_model, load_image, predict
+    from groundingdino.util.inference import load_model
+    import torch
 
+    if torch.cuda.is_available():
+        device = "cuda"
+    else:
+        device = "cpu"
+        warnings.warn("CUDA is not available; running face detection on CPU, which will be slow.")
+    model = load_model(str(CONFIG_PATH), str(WEIGHTS_PATH), device=device)
+    model = model.to(device)
+    return model, device
+
+
+def detect_faces(force: bool = False):
     if RESULT_FILE.exists():
         with open(RESULT_FILE, "r", encoding="utf-8") as f:
             result: dict[str, dict[str, list[float]]] = json.load(f)
     else:
         result = {}
-
-    model = load_model(str(CONFIG_PATH), str(WEIGHTS_PATH))
-    model = model.to('cuda:0')
 
     all_sprites = get_char_sprites()
 
@@ -50,7 +64,7 @@ def detect_faces():
         if char_name not in result:
             result[char_name] = {}
         for variant_name, sprites in variants.items():
-            if variant_name in result[char_name]:
+            if variant_name in result[char_name] and not force:
                 continue
 
             image_path = pick_representative_sprite(sprites)
@@ -58,6 +72,8 @@ def detect_faces():
                 print(f"Warning: no image for {char_name}/{variant_name}")
                 continue
 
+            model, device = _load_detector()
+            from groundingdino.util.inference import load_image, predict
             image_source, image = load_image(str(image_path))
             boxes, logits, phrases = predict(
                 model=model,
@@ -65,6 +81,7 @@ def detect_faces():
                 caption=TEXT_PROMPT,
                 box_threshold=BOX_THRESHOLD,
                 text_threshold=TEXT_THRESHOLD,
+                device=device,
             )
 
             if len(boxes) == 0:
@@ -162,13 +179,16 @@ def generate_face_css():
     save_page("Template:Messenger/face.css", css, "update face positioning CSS")
 
 
-def sprite_face_main():
-    detect_faces()
+def sprite_face_main(force: bool = False):
+    detect_faces(force)
     generate_face_css()
 
 
 def main():
-    sprite_face_main()
+    parser = argparse.ArgumentParser(description="Detect character sprite faces and generate positioning CSS.")
+    parser.add_argument("--force", action="store_true", help="Redo face detection for sprites already in the result file.")
+    args = parser.parse_args()
+    sprite_face_main(args.force)
 
 
 if __name__ == '__main__':
