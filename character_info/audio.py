@@ -11,14 +11,14 @@ from typing import Any
 
 from pywikibot import FilePage, Page
 from pywikibot.pagegenerators import PreloadingGenerator
-from wikitextparser import Template
+from wikitextparser import Template, parse
 
 from character_info.characters import Character, get_characters, get_character_pages
 from utils.audio_utils import compute_audio_distance
 from utils.data_utils import autoload, load_json_from_path, en_root, jp_root, audio_wav_root, temp_dir, cn_root, \
     string_postprocessor
 from utils.upload_utils import UploadRequest, process_uploads, upload_file
-from utils.wiki_utils import save_page, s
+from utils.wiki_utils import save_page, s, find_templates_by_name
 from utils.text_utils import escape_text
 
 
@@ -85,6 +85,8 @@ login_npc_event_title = {
     'Valentine26': "Valentine's Day 2026",
     'ChineseNewYear26': "Chinese New Year 2026",
     'HalfAnniversary': "Half Anniversary",
+    'SummerEvent26': "Summer 2026",
+    'FirstAnniversary': "First Anniversary",
 }
 
 npc_voice_title_mapping = {
@@ -436,6 +438,22 @@ def lines_to_template(lines: list[AudioLine]) -> str:
     return "\n".join(result)
 
 
+def sections_to_templates(page: Page, sections: dict[str, list[AudioLine]]) -> dict[str, str]:
+    result = {heading: lines_to_template(lines) for heading, lines in sections.items()}
+    if not page.exists():
+        return result
+    new_titles = {line.title for lines in sections.values() for line in lines}
+    for section in parse(page.text).sections:
+        if not section.title:
+            continue
+        heading = section.title.strip()
+        deleted_rows = [str(t) for t in find_templates_by_name(section, "AudioRow")
+                        if (arg := t.get_arg("title")) is not None and arg.value.strip() not in new_titles]
+        if deleted_rows:
+            result[heading] = "\n".join(r for r in [result.get(heading, ""), *deleted_rows] if r)
+    return result
+
+
 def generate_audio_page():
     audio = get_audio()
     npc_audio = get_npc_audio()
@@ -453,16 +471,21 @@ def generate_audio_page():
             npc_lines = npc_audio[char.name]
             upload_audio_files(char.name, npc_lines)
             lines_by_type[3].extend(npc_lines)
+        sections = sections_to_templates(page, {
+            "Daily Voice Chat": lines_by_type[1],
+            "Combat Voice Chat": lines_by_type[2],
+            "Special Voice Lines": lines_by_type[3],
+        })
         result = ["{{TrekkerAudioTop}}",
                   "",
                   "==Daily Voice Chat==",
-                  lines_to_template(lines_by_type[1]),
+                  sections["Daily Voice Chat"],
                   "",
                   "==Combat Voice Chat==",
-                  lines_to_template(lines_by_type[2]),
+                  sections["Combat Voice Chat"],
                   "",
                   "==Special Voice Lines==",
-                  lines_to_template(lines_by_type[3]),
+                  sections["Special Voice Lines"],
                   ""
                   "{{TrekkerAudioBottom}}"]
         save_page(page, "\n".join(result), summary="update voice lines page")
@@ -493,13 +516,14 @@ def generate_npc_audio_page():
             else:
                 buckets[0].append(line)
 
+        sections = sections_to_templates(page, {v: buckets[k] for k, v in type_to_title.items()})
         result = ["{{TrekkerAudioTop}}",
                   ""]
-        for k, v in type_to_title.items():
-            if len(buckets[k]) == 0:
+        for heading, rows in sections.items():
+            if rows == "":
                 continue
-            result.append(f"=={v}==")
-            result.append(lines_to_template(buckets[k]))
+            result.append(f"=={heading}==")
+            result.append(rows)
         result.extend([
             "",
             "{{TrekkerAudioBottom}}"])
