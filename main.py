@@ -1,7 +1,7 @@
 import subprocess
 from pathlib import Path
 
-from character_info.audio import generate_audio_page
+from character_info.audio import generate_audio_page, generate_npc_audio_page
 from character_info.char_affinity import affinity_main
 from character_info.char_images import upload_char_images
 from character_info.char_infobox import update_infobox
@@ -36,6 +36,7 @@ def update_character_page():
     update_character_stories()
     update_private_messages()
     generate_audio_page()
+    generate_npc_audio_page()
     update_character_profile()
 
 
