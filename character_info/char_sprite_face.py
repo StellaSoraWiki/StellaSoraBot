@@ -23,6 +23,16 @@ TEXT_PROMPT = "face"
 BOX_THRESHOLD = 0.25
 TEXT_THRESHOLD = 0.20
 
+FACE_BOX_OVERRIDES: dict[str, dict[str, list[int]]] = {
+    "Charlotte": {"a": [385, 305, 850, 540]},
+    "Elis": {"a": [450, 170, 650, 380]},
+    "Female tyrant": {"j": [380, 300, 750, 520]},
+    "Firstlight Noya": {"a": [396, 150, 575, 314]},
+    "Hummingbird": {"a": [330, 600, 510, 820]},
+    "Male tyrant": {"j": [380, 300, 750, 520]},
+    "United Harvest Manager": {"a": [445, 290, 765, 500]},
+}
+
 
 def pick_representative_sprite(sprites: list[Sprite]) -> Path | None:
     if len(sprites) == 1:
@@ -112,7 +122,10 @@ def detect_faces(force: bool = False):
 
 def load_face_data() -> dict[str, dict[str, list[int]]]:
     with open(RESULT_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+        face_data = json.load(f)
+    for char_name, variants in FACE_BOX_OVERRIDES.items():
+        face_data.setdefault(char_name, {}).update(variants)
+    return face_data
 
 
 def sanitize_css_class(char_name: str, variant_name: str) -> str:
