@@ -46,6 +46,15 @@ def _event_avg_activity_ids() -> dict[int, int]:
     return result
 
 
+@cache
+def _event_story_evidence() -> dict[int, tuple[str, ...]]:
+    evidence = {v["Id"]: v["EvId"] for v in autoload("ActivityStoryEvidence").values()}
+    return {
+        condition["Id"]: tuple(evidence[ev_id] for ev_id in condition.get("EvIds_a", ()))
+        for condition in autoload("ActivityStoryCondition").values()
+    }
+
+
 def _event_story_rows(avg_activity_id: int) -> list[dict[str, Any]]:
     story_chapters = autoload("ActivityStoryChapter")
     story_data = autoload("ActivityStory")
@@ -111,6 +120,7 @@ def get_event_story_entries() -> list[EventStoryEntry]:
                         normalize_story_id(parent_id)
                         for parent_id in row.get("ParentStoryId", []) or []
                     ),
+                    evidence_ids=_event_story_evidence().get(row.get("ConditionId"), ()),
                 )
             )
 
