@@ -146,7 +146,7 @@ def format_value(value: str | int | float, show_type: str, enum_type: str) -> st
 
 def format_hit_damage(row: dict, level: int) -> str:
     percent = row['SkillPercentAmend'][level - 1] / 10000
-    flat = row['SkillAbsAmend'][level - 1]
+    flat = row['SkillAbsAmend'][level - 1] if level <= len(row['SkillAbsAmend']) else 0
     parts = []
     if percent > 0:
         parts.append(format_number(percent) + "%")
