@@ -19,6 +19,12 @@ RARITY_NAMES = {
     5: "Gold",
 }
 
+BLESSING_RARITY_NAMES = {
+    3: "Gold",
+    4: "Silver",
+    5: "Bronze",
+}
+
 TRAIT_CATEGORIES = {
     1: "Squad",
     2: "Build",
@@ -72,7 +78,7 @@ def get_blessings() -> list[dict[str, Any]]:
         {
             "id": card["Id"],
             "name": card["Name"],
-            "rarity": RARITY_NAMES[card["Rarity"]],
+            "rarity": BLESSING_RARITY_NAMES[card["Rarity"]],
             "icon": _blessing_icon(card),
             "description": _process(card["Desc"]),
         }
