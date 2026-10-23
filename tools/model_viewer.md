@@ -335,7 +335,9 @@ Each model's `anims` directory is the common parent of its clip directories;
 clips from multiple directories carry relative paths and explicit names.
 `MODEL_REPO_REF` in that module
 is the git ref jsDelivr is pointed at; jsDelivr caches a branch for 12 hours,
-so a re-export that has to show up at once wants a tag or a commit sha there.
+so a re-export that has to show up at once wants a tag or a commit sha there,
+or a purge: `--purge` first purges every file the model repository's latest
+commit touched, 100 paths per request.
 
 The manifest is built from what is on disk here, so it will happily describe
 models nobody has pushed; push `actor3d` first, or the viewer 404s.

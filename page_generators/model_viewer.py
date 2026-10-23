@@ -8,9 +8,14 @@ derives from the game's context rigs (in each .anims.json), and PART_OVERRIDES
 below for what no rig states.
 """
 
+import argparse
 import json
 import posixpath
+import subprocess
+import time
 from typing import Any
+
+import requests
 
 from character_info.characters import get_characters
 from utils.data_utils import assets_root
@@ -123,5 +128,32 @@ def save_manifest() -> None:
                    summary="update 3D model manifest")
 
 
+def purge_last_commit() -> None:
+    """Purge from jsDelivr every file the model repo's latest commit touched."""
+    changed = subprocess.run(
+        ["git", "-C", str(model_root), "diff", "--name-only", "HEAD~1", "HEAD"],
+        check=True, capture_output=True, text=True).stdout.split()
+    cdn_path = CDN_BASE.removeprefix("https://cdn.jsdelivr.net")
+    paths = [cdn_path + name for name in changed]
+    throttled = []
+    for start in range(0, len(paths), 100):
+        response = requests.post("https://purge.jsdelivr.net/",
+                                 json={"path": paths[start:start + 100]})
+        response.raise_for_status()
+        status = response.json()
+        while status["status"] == "pending":
+            time.sleep(1)
+            status = requests.get(f"https://purge.jsdelivr.net/status/{status['id']}").json()
+        throttled += [path for path, result in status["paths"].items() if result["throttled"]]
+    print(f"Purged {len(paths) - len(throttled)} of {len(paths)} files")
+    for path in throttled:
+        print(f"Throttled: {path}")
+
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--purge", action="store_true",
+                        help="purge the model repo's latest commit from jsDelivr first")
+    if parser.parse_args().purge:
+        purge_last_commit()
     save_manifest()
