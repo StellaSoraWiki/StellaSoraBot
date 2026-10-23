@@ -231,6 +231,18 @@ rule. Amber's rules come out exactly as the hand-written example on the
 gadget's advanced docs page — the cat in `Victory` and `Timeline`, nowhere
 else.
 
+Some swap-in parts are never switched off at all. The game leaves them active
+with their bones scaled to a ten-thousandth, and a clip grows them when it
+wants them seen. Firstlight Noya has no context rig, so no rule showed her
+`face09_sp` eye quads, and the end of her `Victory` lost its eyes: the `face09`
+blend shape folds the eyes away to make room for quads that never appeared.
+`PosedModel.revealed()` catches these. It measures each optional part's skinning
+scale, from the determinant and not the bounding box, since two collapsed eye
+quads still span the face. A part under 0.1 in the rest pose is one of these.
+Any clip that takes it to 0.1 or more, sampled ten times a second, adds it to
+`show`. The rule agrees with every rig-backed case, and it fills gaps the rigs
+leave, `VictoryLoop` most often, which no rig names.
+
 ### Parts a clip parks off screen
 
 A rig states the pose a clip starts from, not what the clip goes on to do, so

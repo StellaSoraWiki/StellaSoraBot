@@ -1342,6 +1342,9 @@ class PosedModel:
                     self.root, binary,
                     skin["inverseBindMatrices"]).reshape(-1, 4, 4).transpose(0, 2, 1)
             self.parts.append(part)
+        optional = [part for part in self.parts if part["optional"]]
+        rest = self.scales({}, np.zeros(1), optional)
+        self.collapsed = [part for part in optional if rest[part["name"]][0] < 0.1]
 
     def tracks(self, clip_path: Path) -> dict[str, dict[str, Any]]:
         """The clip's channels, keyed by the node name they retarget onto."""
@@ -1388,6 +1391,44 @@ class PosedModel:
                 found.setdefault(part["name"], []).append(
                     np.stack([points.min(axis=0), points.max(axis=0)]))
         return {name: np.stack(boxes) for name, boxes in found.items()}
+
+    def scales(self, tracks: dict[str, dict[str, Any]], times: np.ndarray,
+               parts: list[dict[str, Any]]) -> dict[str, np.ndarray]:
+        """Part name -> the largest linear scale its skinning applies, at each of `times`.
+
+        Read off the determinant rather than the bounding box: a pair of eye
+        quads collapsed to two points still spans the width of the face.
+        """
+        found: dict[str, list[float]] = {part["name"]: [] for part in parts}
+        for time in times:
+            world = self._world(tracks, float(time))
+            for part in parts:
+                if part["joints"] is None:
+                    matrices = world[part["node"]][None]
+                else:
+                    skinning = world[part["bones"]] @ part["bind"]
+                    matrices = np.einsum("nk,nkij->nij", part["weights"],
+                                         skinning[part["joints"]])
+                found[part["name"]].append(
+                    float(np.abs(np.linalg.det(matrices[:, :3, :3])).max()) ** (1 / 3))
+        return {name: np.array(values) for name, values in found.items()}
+
+    def revealed(self, clip_path: Path, duration: float) -> list[str]:
+        """The optional parts this clip scales up from nothing, by node name.
+
+        Some swap-in parts are never deactivated: the game leaves them on and
+        keeps their bones scaled to a ten-thousandth until a clip grows them.
+        Firstlight Noya's `face09_sp` eye quads are one, and with no context
+        rig for her nothing else says her Victory shows them, so the face
+        blend shape that makes way for them leaves her eyeless. A part
+        collapsed in the rest pose is one of these, and a clip that gives it
+        size at any point means it to be seen.
+        """
+        if not self.collapsed:
+            return []
+        times = np.linspace(0.0, duration, max(5, int(duration * 10)))
+        scales = self.scales(self.tracks(clip_path), times, self.collapsed)
+        return sorted(name for name, values in scales.items() if values.max() >= 0.1)
 
     def parked(self, clip_path: Path, duration: float,
                shown: list[str]) -> list[str]:
@@ -1480,6 +1521,8 @@ def export_animations(char_id: str, char_dir: Path, stem: str,
             "bytes": path.stat().st_size,
         }
         show = show_rules.get(_norm_key(name), [])
+        if model:
+            show = sorted(set(show) | set(model.revealed(path, entry["duration"])))
         hide = model.parked(path, entry["duration"], show) if model else []
         # `hide` runs before `show` in the viewer, so a name left in both would
         # come back on screen.
