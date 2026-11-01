@@ -33,7 +33,7 @@ def get_char_stats() -> dict[Character, list[LevelStats]]:
             breakthrough=v.get('Break', 0),
             attack=v['Atk'],
             hp=v['Hp'],
-            defense=v['Def'],
+            defense=v.get('Def', 0),
         )
         result[char].append(stats)
     return result
@@ -80,25 +80,19 @@ def char_stats_to_template(stats: list[LevelStats],
         set_arg(t, "label", label)
         set_arg(t, "name1", name)
         set_arg(t, "values1", ",".join(str(getattr(stat, attr)) for stat in stats))
-        if attr == 'attack':
+        if attr in ('attack', 'hp'):
             index = 2
             for arg_name, arg_values in [
-                ('affinity1', join_on_attribute(affinity_levels, 'attack')),
-                ('affinity2', join_on_attribute(affinity_levels, 'attack_pct')),
-                ('talent1', join_on_attribute(talent_levels, 'attack')),
-                ('talent2', join_on_attribute(talent_levels, 'attack_pct'))
+                ('affinity1', join_on_attribute(affinity_levels, 'attack' if attr == 'attack' else 'hp')),
+                ('affinity2', join_on_attribute(affinity_levels, f'{attr}_pct')),
+                ('talent1', join_on_attribute(talent_levels, 'attack' if attr == 'attack' else 'hp')),
+                ('talent2', join_on_attribute(talent_levels, f'{attr}_pct'))
             ]:
                 set_arg(t, f"name{index}", arg_name)
                 set_arg(t, f"values{index}", arg_values)
                 index += 1
             # Round down
             set_arg(t, 'formula', '(level + affinity1 + talent1) * (1 + affinity2 + talent2) - 0.5')
-        if attr == 'hp':
-            set_arg(t, "name2", 'affinity')
-            set_arg(t, 'values2', join_on_attribute(affinity_levels, 'hp'))
-            set_arg(t, 'name3', 'talent')
-            set_arg(t, 'values3', join_on_attribute(talent_levels, 'hp'))
-            set_arg(t, "formula", 'level + affinity + talent')
         if attr == 'defense':
             set_arg(t, "name2", "talent")
             set_arg(t, "values2", join_on_attribute(talent_levels, "defense"))

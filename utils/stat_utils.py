@@ -7,6 +7,7 @@ from utils.data_utils import autoload
 @dataclass
 class StatBonus:
     hp: int = 0
+    hp_pct: float = 0
     attack: int = 0
     attack_pct: float = 0
     defense: int = 0
@@ -16,6 +17,7 @@ class StatBonus:
         if isinstance(other, StatBonus):
             return StatBonus(
                 self.hp + other.hp,
+                self.hp_pct + other.hp_pct,
                 self.attack + other.attack,
                 self.attack_pct + other.attack_pct,
                 self.defense + other.defense,
@@ -38,6 +40,8 @@ def get_stat_bonus(effect_ids: list[int], strict: bool = True) -> StatBonus:
         match desc:
             case "Base HP":
                 b.hp += int(val)
+            case "HP":
+                b.hp_pct += float(val)
             case "Base ATK":
                 b.attack += int(val)
             case "ATK":
