@@ -16,13 +16,25 @@ def image_export(obj: ObjectReader, _: Environment, type_filter: ClassIDType | N
         return
     if not obj.container.endswith("png"):
         return
-    exclude_patterns = ['/ui/', '/fonts/', 'lightmap', '/ui_gachacover/commonfx/']
-    if any(pat in obj.container for pat in exclude_patterns):
+    if '/ui_gachacover/commonfx/' in obj.container:
+        return
+    if '/fonts/' in obj.container or 'lightmap' in obj.container:
+        return
+    is_tab_icon = "tab_gacha" in obj.container or "tab_activity" in obj.container
+    is_banner_or_cover = is_tab_icon or any(k in obj.container for k in ['/sidebanner/', '/ui_gachacover/'])
+    if '/ui/' in obj.container and not is_banner_or_cover:
         return
     path = Path(obj.container)
     path.parent.mkdir(parents=True, exist_ok=True)
-    # Prefer sprites over tex2d
-    image_exported = export_image(obj, path, overwrite=type_filter == ClassIDType.Sprite)
+    # Prefer uncropped Texture2D for tab icons to preserve dimensions
+    # Should this be done for skill icons too? Currently they have a
+    # distorted aspect ratio when exporting.
+    if is_tab_icon:
+        overwrite = (type_filter == ClassIDType.Texture2D)
+    else:
+        # Prefer sprites over tex2d for other images
+        overwrite = (type_filter == ClassIDType.Sprite)
+    image_exported = export_image(obj, path, overwrite=overwrite)
     if image_exported and obj.type == ClassIDType.Sprite:
         export_image_metadata(obj, path.with_suffix(".json"))
 
