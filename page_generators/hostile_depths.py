@@ -4,8 +4,11 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+import UnityPy
 from PIL import Image
+from UnityPy.enums import ClassIDType
 
+from unpack.unpack_utils import get_unity3d_files
 from utils.data_utils import assets_root, autoload
 from utils.skill_utils import format_desc, parse_params
 from utils.upload_utils import UploadRequest, process_uploads
@@ -62,6 +65,26 @@ def _untrim_sprite(source: Path) -> Path:
     return out
 
 
+def _trait_card() -> Path:
+    bundle = next(f for f in get_unity3d_files() if f.name == "ui_soldier.unity3d")
+    names = {"db_soldier_handbook_strategycard", "zs_soldier_handbook_strategycard", "zs_soldier_handbook_select_star1"}
+    sprites: dict[str, Image.Image] = {}
+    for obj in UnityPy.load(str(bundle)).objects:
+        if obj.type == ClassIDType.Sprite and (sprite := obj.read()).m_Name in names:
+            sprites[sprite.m_Name] = sprite.image.convert("RGBA")
+    card = sprites["db_soldier_handbook_strategycard"]
+    circle = sprites["zs_soldier_handbook_strategycard"].resize((284, 284), Image.LANCZOS)
+    card.alpha_composite(circle, ((card.width - circle.width) // 2, 63))
+    star_mask = sprites["zs_soldier_handbook_select_star1"].getchannel("A")
+    star = Image.new("RGBA", star_mask.size, (60, 71, 88, 255))
+    star.putalpha(star_mask)
+    card.alpha_composite(star.resize((66, 66), Image.LANCZOS), (27, 39))
+    card.alpha_composite(star.resize((42, 42), Image.LANCZOS), (270, 292))
+    out = Path(tempfile.gettempdir()) / "THD trait card.png"
+    card.save(out)
+    return out
+
+
 def _skill(skill_id: int, max_level: int) -> dict[str, str]:
     skill = autoload("Skill")[str(skill_id)]
     desc = re.sub(r"&Param(\d+)&", lambda m: "{" + m.group(1) + "}", skill["Desc"])
@@ -98,6 +121,7 @@ def get_traits() -> dict[str, dict[str, Any]]:
     for group in sorted(autoload("SoldierPartnerGroup").values(), key=lambda v: v["Id"]):
         result[group["Name"]] = {
             "id": group["PartnerType"],
+            "name": group["Name"],
             "category": TRAIT_CATEGORIES[group["PartnerCatalogue"]],
             "icon": _trait_icon(group),
             "description": _process(group["Desc"]),
@@ -116,8 +140,10 @@ def get_members() -> dict[str, dict[str, Any]]:
     for char in sorted(autoload("SoldierCharacter").values(), key=lambda v: v["Id"]):
         if not char.get("BoardChess"):
             continue
-        result[skins[str(char["Skin"])]["Name"]] = {
+        name = skins[str(char["Skin"])]["Name"]
+        result[name] = {
             "id": char["Id"],
+            "name": name,
             "rarity": RARITY_NAMES[char["Rarity"]],
             "cost": char["Cost"],
             "position": chess_types[char.get("Type", 0)],
@@ -167,6 +193,18 @@ def upload_icons() -> None:
             f"THD rarity {name}.png",
             "[[Category:Through Hostile Depths images]]",
             "Batch upload Through Hostile Depths rarity frames")
+    for rarity, name in BLESSING_RARITY_NAMES.items():
+        card = assets_root / "icon" / "soldierothericon" / f"strategycardquality_0{6 - rarity}_m.png"
+        requests[f"THD blessing card {name}.png"] = UploadRequest(
+            lambda path=card: _untrim_sprite(path),
+            f"THD blessing card {name}.png",
+            "[[Category:Through Hostile Depths images]]",
+            "Batch upload Through Hostile Depths blessing cards")
+    requests["THD trait card.png"] = UploadRequest(
+        _trait_card,
+        "THD trait card.png",
+        "[[Category:Through Hostile Depths images]]",
+        "Upload Through Hostile Depths trait card")
     process_uploads(list(requests.values()))
 
 
