@@ -1,5 +1,4 @@
 from unpack.unpack_audio import export_audio, export_disc_txtp
-from unpack.unpack_banner import export_banner_assets
 from unpack.unpack_event_images import export_event_images
 from unpack.unpack_image import export_images
 from unpack.unpack_live2d import export_createplayer_live2d, export_live2d, export_npc_live2d
@@ -17,7 +16,6 @@ for _required in (data_dir, unity_asset_dir_1, text_dir):
 
 def export_all_assets():
     export_images()
-    export_banner_assets()
     export_audio()
     export_lua()
     export_disc_txtp()
