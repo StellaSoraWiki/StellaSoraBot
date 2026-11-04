@@ -15,8 +15,6 @@ from utils.wiki_utils import PageCreationRequest, process_page_creation_requests
 
 # Copied from events.py, should probably be put into a constant somewhere
 WIKI_TIMEZONE = timezone(timedelta(hours=-7))
-FILE_TEXT = "[[Category:English images]][[Category:Banner tab images]]"
-UPLOAD_SUMMARY = "batch upload banner tab image"
 
 def find_tab_file(res: str | None) -> Path | None:
     if not res:
@@ -194,8 +192,8 @@ def build_banner_tab_requests() -> tuple[list[UploadRequest], list[PageCreationR
             upload_requests.append(UploadRequest(
                 source=source,
                 target=target,
-                text=FILE_TEXT,
-                summary=UPLOAD_SUMMARY,
+                text="[[Category:English images]][[Category:Banner tab images]]",
+                summary="batch upload banner tab image",
             ))
         for r in entry["redirects"]:
             if r != target and r not in redirect_map:
