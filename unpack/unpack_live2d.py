@@ -35,7 +35,7 @@ class Live2DMotion:
 
 @dataclass
 class Live2DExportResult:
-    skin_id: int
+    skin_id: int | str
     variant: str
     output_dir: Path
     moc_name: str | None = None
@@ -198,6 +198,31 @@ def _l2d_bundle_by_skin_id() -> dict[int, Path]:
         if match:
             result[int(match.group(1))] = file
     return result
+
+
+def _npc_bundle_by_skin_id() -> dict[int, Path]:
+    result: dict[int, Path] = {}
+    for file in get_unity3d_files():
+        match = re.fullmatch(r"npc_2d_(\d+)\.unity3d", file.name)
+        if match:
+            result[int(match.group(1))] = file
+    return result
+
+
+def _npc_l2d_bundle_by_skin_id() -> dict[int, Path]:
+    result: dict[int, Path] = {}
+    for file in get_unity3d_files():
+        match = re.fullmatch(r"npc_l2d_(\d+)\.unity3d", file.name)
+        if match:
+            result[int(match.group(1))] = file
+    return result
+
+
+def _createplayer_bundle() -> Path | None:
+    for file in get_unity3d_files():
+        if file.name.casefold() == "ui_createplayer.unity3d":
+            return file
+    return None
 
 
 def _prefab_roots(envs: list[UnityPy.Environment], skin_id: int) -> dict[str, ObjectReader]:
@@ -733,7 +758,7 @@ def _skip_variant(
 
 
 def _export_variant(
-    skin_id: int,
+    skin_id: int | str,
     variant: Live2DVariant,
     source_bundle: Path,
     objects: dict[int, ObjectReader],
@@ -742,6 +767,7 @@ def _export_variant(
     output_root: Path,
     read_errors: list[Live2DReadError],
     overwrite: bool,
+    motion_list_names: list[str] | None = None,
 ) -> Live2DExportResult:
     out_dir = output_root / str(skin_id) / "live2d" / variant.name
     if not overwrite:
@@ -793,7 +819,7 @@ def _export_variant(
             result.warnings.append(f"Duplicate texture filename generated for {texture_name}.")
 
     error_count = len(read_errors)
-    requested_motion_lists = _motion_list_names(variant, candidate.moc_name, skin_id)
+    requested_motion_lists = motion_list_names or _motion_list_names(variant, candidate.moc_name, skin_id)
     motion_list = _find_motion_list(objects, scripts, requested_motion_lists, source_bundle, read_errors)
     if len(read_errors) > error_count:
         result.warnings.append(f"Skipped {len(read_errors) - error_count} unreadable motion list candidates.")
@@ -818,28 +844,40 @@ def _export_variant(
     return result
 
 
-def export_live2d(
-    skin_ids: set[int] | None = None,
-    variants: set[str] | None = None,
-    output_root: Path | None = None,
-    overwrite: bool = False,
-) -> list[Live2DExportResult]:
-    selected_variants = variants or DEFAULT_VARIANTS
-    unknown_variants = selected_variants - set(VARIANTS)
+def _validated_variants(variants: set[str] | None) -> set[str]:
+    selected = variants or DEFAULT_VARIANTS
+    unknown_variants = selected - set(VARIANTS)
     if unknown_variants:
         raise ValueError(f"Unknown Live2D variants: {sorted(unknown_variants)}")
+    return selected
 
-    output_root = output_root or assets_root / "actor2d/character"
-    bundles = _bundle_by_skin_id()
-    l2d_bundles = _l2d_bundle_by_skin_id()
+
+def _print_read_errors(read_errors: list[Live2DReadError]) -> None:
+    if not read_errors:
+        return
+    formatted_errors = _unique_read_error_formats(read_errors)
+    print(f"Skipped {len(formatted_errors)} unreadable Unity objects:")
+    for formatted in formatted_errors:
+        print(f"WARNING: {formatted}")
+
+
+def _export_skin_family(
+    bundles: dict[int, Path],
+    l2d_bundles: dict[int, Path],
+    output_root: Path,
+    skin_ids: set[int] | None,
+    selected_variants: set[str],
+    overwrite: bool,
+    read_errors: list[Live2DReadError],
+    bundle_prefix: str,
+) -> list[Live2DExportResult]:
     if skin_ids is not None:
         missing = sorted(skin_ids - set(bundles))
         for skin_id in missing:
-            print(f"WARNING: No char_2d bundle found for skin {skin_id}")
+            print(f"WARNING: No {bundle_prefix}_2d bundle found for skin {skin_id}")
         bundles = {skin_id: bundles[skin_id] for skin_id in sorted(skin_ids & set(bundles))}
 
     results: list[Live2DExportResult] = []
-    read_errors: list[Live2DReadError] = []
     for skin_id, source_bundle in sorted(bundles.items()):
         if not overwrite:
             existing_results = [
@@ -856,7 +894,7 @@ def export_live2d(
         envs = [env]
         l2d_bundle = l2d_bundles.get(skin_id)
         if l2d_bundle is None:
-            print(f"WARNING: No char_l2d bundle found for skin {skin_id}")
+            print(f"WARNING: No {bundle_prefix}_l2d bundle found for skin {skin_id}")
         else:
             envs.append(UnityPy.load(str(l2d_bundle)))
         objects = {obj.path_id: obj for e in envs for obj in e.objects}
@@ -878,18 +916,129 @@ def export_live2d(
                 read_errors,
                 overwrite,
             ))
-    if read_errors:
-        formatted_errors = _unique_read_error_formats(read_errors)
-        print(f"Skipped {len(formatted_errors)} unreadable Unity objects:")
-        for formatted in formatted_errors:
-            print(f"WARNING: {formatted}")
     return results
+
+
+def export_live2d(
+    skin_ids: set[int] | None = None,
+    variants: set[str] | None = None,
+    output_root: Path | None = None,
+    overwrite: bool = False,
+) -> list[Live2DExportResult]:
+    selected_variants = _validated_variants(variants)
+    output_root = output_root or assets_root / "actor2d/character"
+    read_errors: list[Live2DReadError] = []
+    results = _export_skin_family(
+        _bundle_by_skin_id(),
+        _l2d_bundle_by_skin_id(),
+        output_root,
+        skin_ids,
+        selected_variants,
+        overwrite,
+        read_errors,
+        "char",
+    )
+    _print_read_errors(read_errors)
+    return results
+
+
+def export_npc_live2d(
+    skin_ids: set[int] | None = None,
+    variants: set[str] | None = None,
+    output_root: Path | None = None,
+    overwrite: bool = False,
+) -> list[Live2DExportResult]:
+    # NPC models only ship a base (no full/talent) variant.
+    if variants is None:
+        variants = {"base"}
+    selected_variants = _validated_variants(variants)
+    output_root = output_root or assets_root / "actor2d/npc"
+    read_errors: list[Live2DReadError] = []
+    results = _export_skin_family(
+        _npc_bundle_by_skin_id(),
+        _npc_l2d_bundle_by_skin_id(),
+        output_root,
+        skin_ids,
+        selected_variants,
+        overwrite,
+        read_errors,
+        "npc",
+    )
+    _print_read_errors(read_errors)
+    return results
+
+
+def _createplayer_prefab_root(env: UnityPy.Environment, objects: dict[int, ObjectReader], model_name: str) -> ObjectReader | None:
+    container = f"assets/assetbundles/ui/createplayer/l2d/{model_name}/moc/{model_name}.prefab"
+    try:
+        pointer = env.container[container]
+    except KeyError:
+        return None
+    obj = objects.get(pointer.path_id)
+    if obj is not None and obj.type == ClassIDType.GameObject:
+        return obj
+    return None
+
+
+def export_createplayer_live2d(
+    models: set[str] | None = None,
+    output_root: Path | None = None,
+    overwrite: bool = False,
+) -> list[Live2DExportResult]:
+    models = models or {"createplayer2_f", "createplayer2_m"}
+    unknown = models - {"createplayer_f", "createplayer_m", "createplayer2_f", "createplayer2_m"}
+    if unknown:
+        raise ValueError(f"Unknown createplayer models: {sorted(unknown)}")
+    output_root = output_root or assets_root / "ui/createplayer/l2d"
+
+    source_bundle = _createplayer_bundle()
+    if source_bundle is None:
+        print("WARNING: No ui_createplayer bundle found; skipping createplayer Live2D export.")
+        return []
+
+    results: list[Live2DExportResult] = []
+    read_errors: list[Live2DReadError] = []
+    env = UnityPy.load(str(source_bundle))
+    objects = {obj.path_id: obj for obj in env.objects}
+    scripts = _script_names(objects, source_bundle, read_errors)
+    for model_name in sorted(models):
+        out_dir = output_root / model_name / "live2d" / "base"
+        if not overwrite:
+            existing = _load_existing_result(model_name, VARIANTS["base"], out_dir)
+            if existing is not None:
+                print(f"Skipping {model_name}: already exported (use --overwrite to regenerate).")
+                results.append(existing)
+                continue
+        prefab_root = _createplayer_prefab_root(env, objects, model_name)
+        if prefab_root is None:
+            print(f"WARNING: No createplayer prefab found for {model_name}")
+            continue
+        print(f"Processing {source_bundle.name} ({model_name})")
+        results.append(_export_variant(
+            model_name,
+            VARIANTS["base"],
+            source_bundle,
+            objects,
+            scripts,
+            prefab_root,
+            output_root,
+            read_errors,
+            overwrite,
+            motion_list_names=[f"{model_name.rsplit('_', 1)[0]}_{model_name.rsplit('_', 1)[1].upper()}.fadeMotionList"],
+        ))
+    _print_read_errors(read_errors)
+    return results
+
+
+EXPORT_KINDS = ("character", "npc", "createplayer", "all")
 
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Export Stella Sora Live2D assets from Unity bundles.")
     parser.add_argument("--skin-id", type=int, action="append", dest="skin_ids")
     parser.add_argument("--variant", choices=sorted(VARIANTS), action="append", dest="variants")
+    parser.add_argument("--kind", choices=EXPORT_KINDS, default="all",
+                        help="Which groups to export (default: all)")
     parser.add_argument("--out", type=Path, default=None)
     parser.add_argument("--overwrite", action="store_true", help="Re-export even if output already exists")
     return parser.parse_args()
@@ -899,7 +1048,14 @@ def main() -> None:
     args = _parse_args()
     skin_ids = set(args.skin_ids) if args.skin_ids else None
     variants = set(args.variants) if args.variants else None
-    results = export_live2d(skin_ids=skin_ids, variants=variants, output_root=args.out, overwrite=args.overwrite)
+    results: list[Live2DExportResult] = []
+    if args.kind in ("character", "all"):
+        results.extend(export_live2d(skin_ids=skin_ids, variants=variants, output_root=args.out, overwrite=args.overwrite))
+    if args.kind in ("npc", "all"):
+        if args.kind == "npc" or skin_ids is None or skin_ids & set(_npc_bundle_by_skin_id()):
+            results.extend(export_npc_live2d(skin_ids=skin_ids, variants=variants, output_root=args.out, overwrite=args.overwrite))
+    if args.kind == "createplayer" or (args.kind == "all" and skin_ids is None and args.out is None):
+        results.extend(export_createplayer_live2d(output_root=args.out, overwrite=args.overwrite))
     exported = sum(1 for result in results if result.moc_file)
     print(f"Exported {exported} Live2D variants.")
 

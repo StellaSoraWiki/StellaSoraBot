@@ -131,6 +131,19 @@ If models are missing. Re-export them with
 `uv run -m unpack.unpack_live2d --skin-id <id> --overwrite` (drop `--skin-id` to redo all of
 them).
 
+### Exporting to StellaSoraLive2Ds
+
+```bash
+uv run -m tools.live2d_into_zips
+```
+
+Move the resulting `assets/live2d_zips/` folder contents into the `assets/` folder of the [StellaSoraLive2Ds repository](https://github.com/StellaSoraWiki/StellaSoraLive2Ds), then push with a commit stating the game version (e.g. `version 2.0.0`).
+
+If you want to view the unpacked Live2Ds:
+- Trekkers: `assets/assetbundles/actor2d/character/`
+- Female Tyrant/Male Tyrant: `assets/assetbundles/ui/createplayer/l2d/`
+- NPCs: `assets/assetbundles/actor2d/npc/`
+
 ## Known gaps when running on a second machine
 
 These are not fixed and will need attention:
