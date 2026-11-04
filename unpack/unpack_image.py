@@ -21,7 +21,7 @@ def image_export(obj: ObjectReader, _: Environment, type_filter: ClassIDType | N
     if '/fonts/' in obj.container or 'lightmap' in obj.container:
         return
     is_tab_icon = "tab_gacha" in obj.container or "tab_activity" in obj.container
-    is_banner_or_cover = is_tab_icon or any(k in obj.container for k in ['/sidebanner/', '/ui_gachacover/'])
+    is_banner_or_cover = is_tab_icon or any(k in obj.container for k in ['/sidebanner/', '/ui_gachacover/', 'icon-'])
     if '/ui/' in obj.container and not is_banner_or_cover:
         return
     path = Path(obj.container)
