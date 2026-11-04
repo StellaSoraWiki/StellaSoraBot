@@ -94,25 +94,16 @@ def get_gacha_banner_entries() -> list[dict[str, Any]]:
         # Determine target file name and aliases/redirects
         redirects: list[str] = []
 
-        if name == "A Fateful Encounter":
-            char_id = v.get("GuaranteeTid")
-            char = chars.get(char_id)
-            if char:
-                target_title = f"File:Tab Banner {name} {char.name} EN.png"
-                redirects.append(f"File:Tab Banner {name} {char.name}.png")
-                if date_str:
-                    redirects.append(f"File:Tab Banner {name} {date_str} EN.png")
-                    redirects.append(f"File:Tab Banner {name} {date_str}.png")
+        if name == "A Fateful Encounter" or name == "A Heart-Tuned Melody":
+            if name == "A Fateful Encounter":
+                target_obj = chars.get(v.get("GuaranteeTid"))
+                target_name = target_obj.name if target_obj else None
             else:
-                target_title = f"File:Tab Banner {name} {date_str} EN.png" if date_str else f"File:Tab Banner {name} EN.png"
-                if date_str:
-                    redirects.append(f"File:Tab Banner {name} {date_str}.png")
-        elif name == "A Heart-Tuned Melody":
-            pkg_id = v.get("ATypeUpPkg")
-            disc_title = pkg_to_item.get(pkg_id)
-            if disc_title:
-                target_title = f"File:Tab Banner {name} {disc_title} EN.png"
-                redirects.append(f"File:Tab Banner {name} {disc_title}.png")
+                target_name = pkg_to_item.get(v.get("ATypeUpPkg"))
+                target_obj = target_name
+            if target_obj:
+                target_title = f"File:Tab Banner {name} {banner_target_name} EN.png"
+                redirects.append(f"File:Tab Banner {name} {banner_target_name}.png")
                 if date_str:
                     redirects.append(f"File:Tab Banner {name} {date_str} EN.png")
                     redirects.append(f"File:Tab Banner {name} {date_str}.png")
