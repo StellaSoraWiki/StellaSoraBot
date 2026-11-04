@@ -1,0 +1,7 @@
+.git
+vendor/
+__pycache__
+assets/
+user-config.py
+user-passwords.py
+*.log

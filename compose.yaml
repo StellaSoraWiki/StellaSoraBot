@@ -1,0 +1,50 @@
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: stellasorabot:local
+    # Not sure if works as intended
+    # Comment out if using Docker or if it just doesn't work
+    # because don't remember what local changes made
+    userns_mode: "keep-id"
+    init: true
+    working_dir: /app
+    command: bash
+    stdin_open: true
+    tty: true
+    environment:
+      # Game install folder containing StellaSora_Data/ and Persistent_Store/
+      - STELLA_SORA_DIR=/data/game
+      # Disable Git terminal prompts to avoid blocking on private repos
+      - GIT_TERMINAL_PROMPT=0
+    volumes:
+      - ./vendor/:/app/vendor/:Z
+
+      # pywikibot config and bot password
+      - ./user-config.py:/app/user-config.py:ro,Z
+      - ./user-passwords.py:/app/user-passwords.py:ro,Z
+
+      # Replace /EDIT/ME with the directory
+      # that contains StellaSora_Data/ and Persistent_Store/
+      - /EDIT/ME/StellaSora_EN:/data/game:Z
+      # Not sure what this does but it was in the README
+      # - /EDIT/ME/OldAssets:/data/OldAssets:Z
+      # Persistent bot outputs
+      - ./assets:/app/assets:Z
+      # pywikibot API cache
+      - ./apicache:/app/apicache:Z
+    ports:
+      # Serves the Live2D viewer with `uv run python -m http.server 8000`
+      - "8000:8000"
+      
+    # Optional NVIDIA GPU for GroundingDINO face detection path
+    # (uv run -m main_other). Requires the NVIDIA Container Toolkit and uv sync change
+    # Never tested 
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
