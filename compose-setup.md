@@ -16,7 +16,7 @@ installing all the necessary dependencies on your host, and is the recommended p
 
 Optional:
 
-- To accelerate the [GroundingDINO](https://github.com/idea-research/groundingdino) sprite face detection pipeline, the NVIDIA Container Toolkit and a NVIDIA GPU with CUDA support. Otherwise, it runs on the CPU and is very slow. See [Optional: Enable the GPU face-detection path](#Optional:_Enable_the_GPU_face-detection_path)
+- To accelerate the [GroundingDINO](https://github.com/idea-research/groundingdino) sprite face detection pipeline, the NVIDIA Container Toolkit and a NVIDIA GPU with CUDA support. Otherwise, it runs on the CPU and is very slow. See [Optional: Enable the GPU face-detection path](#optional-enable-the-gpu-face-detection-path)
 - OldAssets folder: I don't remember what this does
 
 ## Quick start
