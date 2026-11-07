@@ -192,9 +192,9 @@ The service exposes port 8000 on the host. You can run the built-in HTTP server 
 
 ## Optional: Enable the GPU face-detection path
 
-The `main_other` entry point uses GroundingDINO and PyTorch for sprite face detection and 3D model processing. This optional pipeline requires an NVIDIA GPU and dedicated dependencies.
+The `main_other` entry point uses GroundingDINO and PyTorch for sprite face detection and 3D model processing. This optional pipeline runs best with a NVIDIA GPU and CUda.
 
-1. Install the NVIDIA Container Toolkit on your Linux host. Configure the container runtime to expose NVIDIA GPUs.
+1. Install the NVIDIA Container Toolkit on your Linux host.
 
 2. Open `Containerfile` in a text editor. Replace the line `&& uv sync --frozen` with `&& uv sync --frozen --extra grounding`:
 
@@ -220,7 +220,7 @@ The `main_other` entry point uses GroundingDINO and PyTorch for sprite face dete
    podman compose up -d --build
    ```
 
-5. Run the GPU-accelerated workflow module:
+5. Run the machine learning pipeline:
 
    ```bash
    podman compose exec bot uv run -m main_other
