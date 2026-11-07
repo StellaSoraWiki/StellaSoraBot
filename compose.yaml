@@ -4,10 +4,6 @@ services:
       context: .
       dockerfile: Containerfile
     image: stellasorabot:local
-    # Not sure if works as intended
-    # Comment out if using Docker or if it just doesn't work
-    # because don't remember what local changes made
-    userns_mode: "keep-id"
     init: true
     working_dir: /app
     command: bash

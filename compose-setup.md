@@ -7,7 +7,6 @@ installing all the necessary dependencies on your host, and is the recommended p
 
 - [Podman](https://podman.io) 4.0+ or another compatible runtime like Docker.
 - [Podman Compose](https://github.com/containers/podman-compose) or equivalent
-   - Docker users:, comment out the `userns_mode: "keep-id"` line in `compose.yaml`
 - [Git](https://git-scm.com)
 - Internet access
 - Installed Windows copy of Stella Sora. This is compatible with the Steam and Windows Standalone client
@@ -88,8 +87,6 @@ Optional:
    ```yaml
          - /home/<username>/games/StellaSora_EN:/data/game:Z
    ```
-
-   Docker users:, comment out the `userns_mode: "keep-id"` line in `compose.yaml`
 
 8. Build the container image and start the service in detached mode:
 
