@@ -54,6 +54,12 @@ Optional:
    ('<username>', BotPassword('StellaSoraBot', 'verysecretpassworddonotshare'))
    ```
 
+   Ensure you run the following command to change the permissions of the user-passwords.py file, this is mandatory for pywikibot to work.
+   
+   ```bash
+   chmod 600 user-passwords.py
+   ```
+
    Generate the bot password at [`Special:BotPasswords`](https://stellasora.miraheze.org/wiki/Special:BotPasswords). You must use `StellaSoraBot` as the bot password name.
 
    It needs the permissions:
