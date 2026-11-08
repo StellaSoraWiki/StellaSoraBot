@@ -26,10 +26,6 @@ def find_tab_file(res: str | None) -> Path | None:
 
     # Older banner images are not suffixed with _lang
     candidates = [
-        assets_root / f"assetbundles_en/{subpath}/{filename}.png",
-        assets_root / f"assetbundles/{subpath}/{filename}.png",
-        assets_root / f"assetbundles_en/{subpath}/{filename}_lang.png",
-        assets_root / f"assetbundles/{subpath}/{filename}_lang.png",
         Path(f"assets/assetbundles_en/{subpath}/{filename}.png"),
         Path(f"assets/assetbundles/{subpath}/{filename}.png"),
         Path(f"assets/assetbundles_en/{subpath}/{filename}_lang.png"),
@@ -38,8 +34,6 @@ def find_tab_file(res: str | None) -> Path | None:
     if filename.endswith("_lang"):
         base = filename[:-5]
         candidates.extend([
-            assets_root / f"assetbundles_en/{subpath}/{base}.png",
-            assets_root / f"assetbundles/{subpath}/{base}.png",
             Path(f"assets/assetbundles_en/{subpath}/{base}.png"),
             Path(f"assets/assetbundles/{subpath}/{base}.png"),
         ])
