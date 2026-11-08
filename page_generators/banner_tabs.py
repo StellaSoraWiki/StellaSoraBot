@@ -97,11 +97,10 @@ def get_gacha_banner_entries() -> list[dict[str, Any]]:
         if name == "A Fateful Encounter" or name == "A Heart-Tuned Melody":
             if name == "A Fateful Encounter":
                 target_obj = chars.get(v.get("GuaranteeTid"))
-                target_name = target_obj.name if target_obj else None
+                target_name if target_obj else None
             else:
                 target_name = pkg_to_item.get(v.get("ATypeUpPkg"))
-                target_obj = target_name
-            if target_obj:
+            if target_name:
                 target_title = f"File:Tab Banner {name} {banner_target_name} EN.png"
                 redirects.append(f"File:Tab Banner {name} {banner_target_name}.png")
                 if date_str:
