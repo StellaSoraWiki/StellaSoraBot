@@ -5,6 +5,10 @@ Parses game data and assets from Stella Sora and generates/uploads wiki content 
 
 Special thanks to [StellaSoraData](https://github.com/Hiro420/StellaSoraData) and [StellaSoraParser](https://github.com/Hiro420/StellaSoraParser).
 
+## Containerized setup
+
+Most users should follow this for simplicity of updating and minimize dependency wrangling. The steps to setup manually are still below. See [Run StellaSoraBot in a container](./compose-setup.md).
+
 ## Prerequisites
 
 | Tool | Why | Windows install |
