@@ -63,10 +63,11 @@ Optional:
    Generate the bot password at [`Special:BotPasswords`](https://stellasora.miraheze.org/wiki/Special:BotPasswords). You must use `StellaSoraBot` as the bot password name.
 
    It needs the permissions:
-   - I don't remember
-   - I don't remember
-   - I don't remember
-   - WIP
+   - Basic rights (basic)
+   - Edit existing pages (editpage)
+   - Create, edit, and move pages (createeditmovepage)
+   - Upload new files (uploadfile)
+   - Upload, replace, and move files (uploadeditmovefile)
 
 5. Edit line 6 and 15 of `user-config.py` to match your wiki username.
    This is a must to avoid being blocked by Miraheze, see [https://meta.miraheze.org/wiki/Tech:User_Agents](https://meta.miraheze.org/wiki/Tech:User_Agents)
