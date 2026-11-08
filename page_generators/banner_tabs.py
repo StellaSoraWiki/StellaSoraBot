@@ -101,8 +101,8 @@ def get_gacha_banner_entries() -> list[dict[str, Any]]:
             else:
                 target_name = pkg_to_item.get(v.get("ATypeUpPkg"))
             if target_name:
-                target_title = f"File:Tab Banner {name} {banner_target_name} EN.png"
-                redirects.append(f"File:Tab Banner {name} {banner_target_name}.png")
+                target_title = f"File:Tab Banner {name} {target_name} EN.png"
+                redirects.append(f"File:Tab Banner {name} {target_name}.png")
                 if date_str:
                     redirects.append(f"File:Tab Banner {name} {date_str} EN.png")
                     redirects.append(f"File:Tab Banner {name} {date_str}.png")
