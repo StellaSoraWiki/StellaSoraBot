@@ -134,8 +134,9 @@ When runing the bot for the first time, it is essential to run these commands in
 
 ### On updates
 
-TODO document how to rebuild container
-Something like pull git repo,`podman ps` then find the name of the StellaSoraBot container then `podman rm` it, run `podman compose up --build` again
+Run `git pull` and `git checkout master` first to ensure you have the latest updates to the bot.
+
+Then, run `podman compose down -t 0`, followed by `podman compose up -d` to rebuild the container.
 
 * Run `main2` when the game updates
 
@@ -149,7 +150,7 @@ Something like pull git repo,`podman ps` then find the name of the StellaSoraBot
   podman compose exec bot uv run -m main
   ```
 
-* Run `main_other` when... 
+* Run `main_other` when running face detection and other machine learning workflows
 
   ```bash
   podman compose exec bot uv run -m main_other
