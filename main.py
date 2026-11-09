@@ -11,6 +11,7 @@ from character_info.char_skills import skill_main
 from character_info.char_stats import update_character_stats
 from character_info.char_story import update_character_stories
 from character_info.private_message import update_private_messages
+from page_generators.banner_tabs import upload_banner_tabs
 from page_generators.discs import update_disc_all
 from page_generators.events import save_event_all
 from page_generators.live2d_talent_images import live2d_talent_images_main
@@ -53,6 +54,7 @@ def main():
     autoload_all_files()
     update_character_page()
     save_event_all()
+    upload_banner_tabs()
     update_disc_all()
     export_all_stories()
     purge_all_pages()
