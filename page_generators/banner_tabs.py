@@ -83,7 +83,7 @@ def get_gacha_banner_entries() -> list[dict[str, Any]]:
             continue
 
         start_time = v.get("StartTime")
-        date_str = _wiki_date(datetime.fromisoformat(start_time))
+        date_str = _wiki_date(datetime.fromisoformat(start_time)) if start_time else None
 
         # Determine target file name and aliases/redirects
         redirects: list[str] = []
