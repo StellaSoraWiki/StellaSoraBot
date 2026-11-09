@@ -91,7 +91,7 @@ def get_gacha_banner_entries() -> list[dict[str, Any]]:
         if name == "A Fateful Encounter" or name == "A Heart-Tuned Melody":
             if name == "A Fateful Encounter":
                 target_obj = chars.get(v.get("GuaranteeTid"))
-                target_name if target_obj else None
+                target_name = target_obj.name if target_obj else None
             else:
                 target_name = pkg_to_item.get(v.get("ATypeUpPkg"))
             if target_name:
